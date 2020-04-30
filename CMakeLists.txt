@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.15)
 project(cpp_threads)
 
-set(CMAKE_CXX_STANDARD 14)
-SET(CMAKE_CXX_FLAGS -pthread)
+set(CMAKE_CXX_STANDARD 17)
 
-add_executable(cpp_threads main.cpp main.cpp Player.cpp Player.h Server.cpp Server.h)
+add_executable(cpp_threads
+        src/Player.cpp
+        src/Player.h
+        src/GameSession.cpp
+        src/GameSession.h
+        src/Server.cpp
+        src/Server.h
+        src/main.cpp
+        )
