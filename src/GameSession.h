@@ -2,6 +2,8 @@
 #define CPP_THREADS_GAMESESSION_H
 
 #include <vector>
+#include <mutex>
+#include <condition_variable>
 
 class Player;
 
@@ -16,27 +18,38 @@ public:
     enum class GameSessionState {
         Idle,
         WaitingForPlayers,
+        CancelingSession,
         Running
     };
 
-    // Game session loop
+    [[noreturn]] // Game session loop
     void operator()();
 
     void onPlayersCollected(const std::vector<Player *> &collectedPlayers);
+
+    void onCancelRequestPlayers(bool wasRequestSuccessful);
 
     [[nodiscard]] unsigned int getId() const;
 
     [[nodiscard]] GameSessionState getState() const;
 
-    [[nodiscard]] int getCurrentSessionDuration() const;
+    [[nodiscard]] std::vector<Player *> getCurrentPlayers() const;
 
 private:
 
     unsigned int id;
-    GameSessionState currentGameSession;
+    GameSessionState currentGameSessionState;
     Server *server;
 
-    int currentSessionDuration;
+    std::mutex collectedPlayersMutex;
+    std::condition_variable collectedPlayersCondVar;
+    bool playersCollected;
+    std::vector<Player *> currentSessionPlayers;
+
+    std::mutex collectPlayersRequestCancelMutex;
+    std::condition_variable collectPlayersRequestCancelCondVar;
+    bool cancelRequestProcessed;
+    bool collectPlayersRequestCanceled;
 };
 
 #include "Player.h"

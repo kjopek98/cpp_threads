@@ -1,22 +1,84 @@
 #include "GameSession.h"
 
-#include <thread>
 #include <chrono>
+#include <random>
 
-GameSession::GameSession(unsigned int id, Server *server) : id(id), currentGameSession(GameSessionState::Idle),
-                                                            server(server) {
+GameSession::GameSession(unsigned int id, Server *server) : id(id), currentGameSessionState(GameSessionState::Idle),
+                                                            server(server), playersCollected(false),
+                                                            cancelRequestProcessed(false),
+                                                            collectPlayersRequestCanceled(false) {
+}
+
+[[noreturn]] void GameSession::operator()() {
+    std::mt19937 gen(time(nullptr));
+    std::uniform_int_distribution<> idleTime(1, 10);
+    std::uniform_int_distribution<> nPlayers(3, 5);
+    std::uniform_int_distribution<> gameSessionDuration(15, 30);
+    std::uniform_real_distribution<> cancelSessionRoll(0, 1);
+    RequestData requestData;
+
+    while (true) {
+        currentGameSessionState = GameSessionState::Idle;
+        std::this_thread::sleep_for(std::chrono::seconds(idleTime(gen)));
+
+        requestData.type = RequestData::Type::RequestPlayers;
+        requestData.gameSession = this;
+        requestData.nPlayers = nPlayers(gen);
+        server->requestServerAction(requestData);
+        currentGameSessionState = GameSessionState::WaitingForPlayers;
+        {
+            std::unique_lock<std::mutex> lock(collectedPlayersMutex);
+            collectedPlayersCondVar.wait(lock, [this] { return playersCollected; });
+            playersCollected = false;
+        }
+        // Further modification of playersCollected or currentSessionPlayers is an error - code does not expect this
+
+        if (cancelSessionRoll(gen) < 0.1) {
+            requestData.type = RequestData::Type::CancelRequestPlayers;
+            requestData.gameSession = this;
+            requestData.acquiredPlayers = &currentSessionPlayers;
+            server->requestServerAction(requestData);
+            currentGameSessionState = GameSessionState::CancelingSession;
+            {
+                std::unique_lock<std::mutex> lock(collectPlayersRequestCancelMutex);
+                collectPlayersRequestCancelCondVar.wait(lock, [this] { return cancelRequestProcessed; });
+                cancelRequestProcessed = false;
+            }
+            if (collectPlayersRequestCanceled) {
+                currentSessionPlayers.clear();
+                continue;
+            }
+        }
+
+        for (Player *player : currentSessionPlayers) {
+            player->onGameFound(this);
+        }
+
+        currentGameSessionState = GameSessionState::Running;
+        std::this_thread::sleep_for(std::chrono::seconds(gameSessionDuration(gen)));
+        for (Player *player : currentSessionPlayers) {
+            player->onGameEnd();
+        }
+        currentSessionPlayers.clear();
+    }
 }
 
 void GameSession::onPlayersCollected(const std::vector<Player *> &collectedPlayers) {
-    // TODO simulate the game being played
-    for (const auto &player : collectedPlayers) {
-        player->onGameFound(this);
+    {
+        std::unique_lock<std::mutex> lock(collectedPlayersMutex);
+        currentSessionPlayers = collectedPlayers;
+        playersCollected = true;
     }
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    collectedPlayersCondVar.notify_one();
 }
 
-void GameSession::operator()() {
-    // TODO implement
+void GameSession::onCancelRequestPlayers(bool wasRequestSuccessful) {
+    {
+        std::unique_lock<std::mutex> lock(collectPlayersRequestCancelMutex);
+        collectPlayersRequestCanceled = wasRequestSuccessful;
+        cancelRequestProcessed = true;
+    }
+    collectPlayersRequestCancelCondVar.notify_one();
 }
 
 unsigned int GameSession::getId() const {
@@ -24,9 +86,9 @@ unsigned int GameSession::getId() const {
 }
 
 GameSession::GameSessionState GameSession::getState() const {
-    return currentGameSession;
+    return currentGameSessionState;
 }
 
-int GameSession::getCurrentSessionDuration() const {
-    return currentSessionDuration;
+std::vector<Player *> GameSession::getCurrentPlayers() const {
+    return currentSessionPlayers;
 }

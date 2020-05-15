@@ -28,6 +28,8 @@ public:
 
     void onGameFound(const GameSession *inGameSession);
 
+    void onGameEnd();
+
     void onGameSessionRequestCancel(bool wasRequestCanceled);
 
     [[nodiscard]] PlayerState getState() const;
@@ -48,6 +50,10 @@ private:
     std::condition_variable cancelRequestGameSessionCondVar;
     bool cancelRequestProcessed;
     bool gameSessionRequestCanceled;
+
+    std::mutex gameEndMutex;
+    std::condition_variable gameEndCondVar;
+    bool gameEnded;
 };
 
 #include "Server.h"

@@ -18,7 +18,9 @@ void Server::requestServerAction(const RequestData &requestData) {
                     [this, requestData] { requestPlayers(*(requestData.gameSession), requestData.nPlayers); });
             break;
         case RequestData::Type::CancelRequestPlayers:
-            serverWorkers.addJob([this, requestData] { cancelRequestPlayers(*(requestData.acquiredPlayers)); });
+            serverWorkers.addJob([this, requestData] {
+                cancelRequestPlayers(*(requestData.gameSession), *(requestData.acquiredPlayers));
+            });
             break;
     }
 }
@@ -74,7 +76,7 @@ void Server::requestPlayers(GameSession &gameSession, unsigned int nPlayers) {
     gameSession.onPlayersCollected(assignedPayers);
 }
 
-bool Server::cancelRequestPlayers(const std::vector<Player *> &acquiredPlayers) {
+void Server::cancelRequestPlayers(GameSession &gameSession, const std::vector<Player *> &acquiredPlayers) {
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
@@ -82,13 +84,14 @@ bool Server::cancelRequestPlayers(const std::vector<Player *> &acquiredPlayers) 
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (waitingPlayerQueue.size() + acquiredPlayers.size() > PLAYER_QUEUE_SIZE) {
             currentServerState = ServerState::Idle;
-            return false;
+            gameSession.onCancelRequestPlayers(false);
+            return;
         }
         waitingPlayerQueue.insert(waitingPlayerQueue.end(), acquiredPlayers.begin(), acquiredPlayers.end());
         currentServerState = ServerState::Idle;
     }
     playerQueueCondVar.notify_all();
-    return true;
+    gameSession.onCancelRequestPlayers(true);
 }
 
 Server::ServerState Server::getState() const {

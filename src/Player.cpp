@@ -7,7 +7,8 @@
 
 Player::Player(std::string name, Server *server) : playerName(std::move(name)), currentPlayerState(PlayerState::Idle),
                                                    server(server), gameSessionFound(false), gameSession(nullptr),
-                                                   cancelRequestProcessed(false), gameSessionRequestCanceled(false) {
+                                                   cancelRequestProcessed(false), gameSessionRequestCanceled(false),
+                                                   gameEnded(false) {
 }
 
 [[noreturn]] void Player::operator()() {
@@ -46,7 +47,11 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
         // Further modification of gameSessionFound or gameSession is an error - code does not expect this
         gameSessionFound = false;
         currentPlayerState = PlayerState::Playing;
-        std::this_thread::sleep_for(std::chrono::seconds(gameSession->getCurrentSessionDuration()));
+        {
+            std::unique_lock<std::mutex> lock(gameEndMutex);
+            gameEndCondVar.wait(lock, [this] { return gameEnded; });
+            gameEnded = false;
+        }
     }
 }
 
@@ -58,6 +63,13 @@ void Player::onGameFound(const GameSession *inGameSession) {
     }
 }
 
+void Player::onGameEnd() {
+    {
+        std::unique_lock<std::mutex> lock(gameEndMutex);
+        gameEnded = true;
+    }
+    gameEndCondVar.notify_one();
+}
 
 void Player::onGameSessionRequestCancel(bool wasRequestCanceled) {
     {

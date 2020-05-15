@@ -35,9 +35,7 @@ public:
 
     void requestPlayers(GameSession &gameSession, unsigned int nPlayers);
 
-    // Returns true if request was processed successfully,
-    // otherwise returns false
-    bool cancelRequestPlayers(const std::vector<Player *> &acquiredPlayers);
+    void cancelRequestPlayers(GameSession &gameSession, const std::vector<Player *> &acquiredPlayers);
 
     // Thread safe
     [[nodiscard]] ServerState getState() const;
