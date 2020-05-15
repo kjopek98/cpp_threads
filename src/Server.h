@@ -1,12 +1,15 @@
 #ifndef CPP_THREADS_SERVER_H
 #define CPP_THREADS_SERVER_H
 
-#include <queue>
+#include <vector>
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include "Player.h"
 #include "GameSession.h"
+#include "RequestData.h"
+#include "ThreadPool.h"
 
 
 class Server {
@@ -22,6 +25,9 @@ public:
     };
 
     Server();
+
+    // Entry point to the server
+    void requestServerAction(const RequestData &requestData);
 
     void requestGameSession(Player &player);
 
@@ -39,13 +45,16 @@ public:
     [[nodiscard]] ServerState getState() const;
 
 private:
-    const unsigned int QUEUE_SIZE = 10;
 
-    std::mutex queueMutex;
-    std::condition_variable queueCondVar;
-    std::queue<Player *> waitingPlayerQueue;
     ServerState currentServerState;
 
+    const unsigned int PLAYER_QUEUE_SIZE = 10;
+    std::mutex playerQueueMutex;
+    std::condition_variable playerQueueCondVar;
+    std::vector<Player *> waitingPlayerQueue;
+
+    const unsigned int N_SERVER_WORKERS = 10;
+    ThreadPool serverWorkers;
 };
 
 
