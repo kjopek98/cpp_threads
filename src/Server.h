@@ -31,9 +31,7 @@ public:
 
     void requestGameSession(Player &player);
 
-    // Returns true if request was processed successfully,
-    // otherwise returns false
-    bool cancelRequestGameSession(Player &player);
+    void cancelRequestGameSession(Player &player);
 
     void requestPlayers(GameSession &gameSession, unsigned int nPlayers);
 

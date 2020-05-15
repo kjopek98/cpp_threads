@@ -36,7 +36,7 @@ void Server::requestGameSession(Player &player) {
     playerQueueCondVar.notify_all();
 }
 
-bool Server::cancelRequestGameSession(Player &player) {
+void Server::cancelRequestGameSession(Player &player) {
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
@@ -47,12 +47,13 @@ bool Server::cancelRequestGameSession(Player &player) {
                 waitingPlayerQueue.erase(waitingPlayerQueue.begin() + i);
                 playerQueueCondVar.notify_all();
                 currentServerState = ServerState::Idle;
-                return true;
+                player.onGameSessionRequestCancel(true);
+                return;
             }
         }
         currentServerState = ServerState::Idle;
     }
-    return false;
+    player.onGameSessionRequestCancel(false);
 }
 
 void Server::requestPlayers(GameSession &gameSession, unsigned int nPlayers) {

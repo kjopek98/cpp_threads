@@ -28,11 +28,15 @@ public:
 
     [[nodiscard]] GameSessionState getState() const;
 
+    [[nodiscard]] int getCurrentSessionDuration() const;
+
 private:
 
     unsigned int id;
     GameSessionState currentGameSession;
     Server *server;
+
+    int currentSessionDuration;
 };
 
 #include "Player.h"

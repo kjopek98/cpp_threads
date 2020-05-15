@@ -2,6 +2,8 @@
 #define CPP_THREADS_PLAYER_H
 
 #include <string>
+#include <mutex>
+#include <condition_variable>
 
 #include "GameSession.h"
 
@@ -16,13 +18,17 @@ public:
     enum class PlayerState {
         Idle,
         WaitingForGame,
+        CancelingGameRequest,
         Playing
     };
 
     // Player loop (start thread with this)
+    [[noreturn]]
     void operator()();
 
-    void onGameFound(const GameSession *gameSession);
+    void onGameFound(const GameSession *inGameSession);
+
+    void onGameSessionRequestCancel(bool wasRequestCanceled);
 
     [[nodiscard]] PlayerState getState() const;
 
@@ -34,6 +40,14 @@ private:
     PlayerState currentPlayerState;
     Server *server;
 
+    std::mutex gameSessionMutex;
+    bool gameSessionFound;
+    const GameSession *gameSession;
+
+    std::mutex cancelRequestGameSessionMutex;
+    std::condition_variable cancelRequestGameSessionCondVar;
+    bool cancelRequestProcessed;
+    bool gameSessionRequestCanceled;
 };
 
 #include "Server.h"

@@ -26,3 +26,7 @@ unsigned int GameSession::getId() const {
 GameSession::GameSessionState GameSession::getState() const {
     return currentGameSession;
 }
+
+int GameSession::getCurrentSessionDuration() const {
+    return currentSessionDuration;
+}
