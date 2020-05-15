@@ -44,7 +44,10 @@ void ThreadPool::addJob(const std::function<void()> &job) {
 }
 
 ThreadPool::~ThreadPool() {
-    terminateThreadPool = true;
+    {
+        std::unique_lock<std::mutex> lock(jobMutex);
+        terminateThreadPool = true;
+    }
     jobCondVar.notify_all();
 
     for (std::thread &worker : pool) {

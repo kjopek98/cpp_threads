@@ -24,7 +24,7 @@ private:
     const unsigned int nThreads;
     std::vector<std::thread> pool;
 
-    std::atomic<bool> terminateThreadPool;
+    bool terminateThreadPool;
 
     std::mutex jobMutex;
     std::condition_variable jobCondVar;
