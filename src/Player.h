@@ -43,6 +43,7 @@ private:
     Server *server;
 
     std::mutex gameSessionMutex;
+    std::condition_variable gameSessionCondVar;
     bool gameSessionFound;
     const GameSession *gameSession;
 

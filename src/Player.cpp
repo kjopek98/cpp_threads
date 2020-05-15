@@ -25,7 +25,11 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
         requestData.player = this;
         server->requestServerAction(requestData);
         currentPlayerState = PlayerState::WaitingForGame;
-        std::this_thread::sleep_for(std::chrono::seconds(waitForGameTime(gen)));
+        {
+            std::unique_lock<std::mutex> lock(gameSessionMutex);
+            gameSessionCondVar.wait_for(lock, std::chrono::seconds(waitForGameTime(gen)),
+                                        [this] { return gameSessionFound; });
+        }
         {
             std::unique_lock<std::mutex> lock(gameSessionMutex);
             if (!gameSessionFound) {
@@ -61,6 +65,7 @@ void Player::onGameFound(const GameSession *inGameSession) {
         this->gameSession = inGameSession;
         gameSessionFound = true;
     }
+    gameSessionCondVar.notify_one();
 }
 
 void Player::onGameEnd() {
