@@ -21,14 +21,14 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
 
     while (true) {
         currentPlayerState = PlayerState::Idle;
-        std::cout << "Player " << playerName << " is idle" << std::endl;
+        //std::cout << "Player " << playerName << " is idle" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(idleTime(gen)));
 
         requestData.type = RequestData::Type::RequestGame;
         requestData.player = this;
         server->requestServerAction(requestData);
         currentPlayerState = PlayerState::WaitingForGame;
-        std::cout << "Player " << playerName << " is waiting for a game" << std::endl;
+        //std::cout << "Player " << playerName << " is waiting for a game" << std::endl;
         {
             std::unique_lock<std::mutex> lock(gameSessionMutex);
             gameSessionCondVar.wait_for(lock, std::chrono::seconds(waitForGameTime(gen)),
@@ -57,7 +57,7 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
         gameSessionFound = false;
 
         currentPlayerState = PlayerState::Playing;
-        std::cout << "Player " << playerName << " is playing" << std::endl;
+        //std::cout << "Player " << playerName << " is playing" << std::endl;
         {
             std::unique_lock<std::mutex> lock(gameEndMutex);
             gameEndCondVar.wait(lock, [this] { return gameEnded; });
