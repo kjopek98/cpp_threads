@@ -40,7 +40,7 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
                 gameSessionMutex.unlock();
                 currentPlayerState = PlayerState::CancelingGameRequest;
                 requestData.type = RequestData::Type::CancelRequestGame;
-                std::cout << "Player " << playerName << " is canceling game request" << std::endl;
+                //std::cout << "Player " << playerName << " is canceling game request" << std::endl;
                 requestData.player = this;
                 server->requestServerAction(requestData);
                 {
