@@ -4,6 +4,7 @@ project(cpp_threads)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(cpp_threads
+        src/States.h
         src/ThreadPool.cpp
         src/ThreadPool.h
         src/Player.cpp

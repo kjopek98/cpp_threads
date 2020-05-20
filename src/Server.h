@@ -4,25 +4,16 @@
 #include <vector>
 #include <mutex>
 #include <condition_variable>
-#include <atomic>
 
 #include "Player.h"
 #include "GameSession.h"
 #include "RequestData.h"
 #include "ThreadPool.h"
-
+#include "States.h"
 
 class Server {
 
 public:
-
-    enum class ServerState {
-        Idle,
-        RequestGameSession,
-        CancelRequestGameSession,
-        RequestPlayers,
-        CancelRequestPlayers
-    };
 
     Server();
 
@@ -38,11 +29,11 @@ public:
     void cancelRequestPlayers(GameSession &gameSession, const std::vector<Player *> &acquiredPlayers);
 
     // Thread safe
-    [[nodiscard]] ServerState getState() const;
+    [[nodiscard]] const std::vector<States::ServerState> &getWorkerStates() const;
+
+    [[nodiscard]] const std::vector<Player *> &getWaitingPlayerQueue() const;
 
 private:
-
-    ServerState currentServerState;
 
     const unsigned int PLAYER_QUEUE_SIZE = 10;
     std::mutex playerQueueMutex;
@@ -51,6 +42,7 @@ private:
 
     const unsigned int N_SERVER_WORKERS = 10;
     ThreadPool serverWorkers;
+
 };
 
 
