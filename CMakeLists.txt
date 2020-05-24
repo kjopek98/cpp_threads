@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS -pthread )
 
 add_executable(cpp_threads
+        src/States.h
         src/ThreadPool.cpp
         src/ThreadPool.h
         src/Player.cpp

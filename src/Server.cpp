@@ -3,24 +3,27 @@
 #include <thread>
 #include <chrono>
 
-Server::Server() : currentServerState(ServerState::Idle), serverWorkers(N_SERVER_WORKERS) {}
+Server::Server() : serverWorkers(N_SERVER_WORKERS) {}
 
 void Server::requestServerAction(const RequestData &requestData) {
     switch (requestData.type) {
         case RequestData::Type::RequestGame:
-            serverWorkers.addJob([this, requestData] { requestGameSession(*(requestData.player)); });
+            serverWorkers.addJob([this, requestData] { requestGameSession(*(requestData.player)); },
+                                 States::ServerState::RequestGameSession);
             break;
         case RequestData::Type::CancelRequestGame:
-            serverWorkers.addJob([this, requestData] { cancelRequestGameSession(*(requestData.player)); });
+            serverWorkers.addJob([this, requestData] { cancelRequestGameSession(*(requestData.player)); },
+                                 States::ServerState::CancelRequestGameSession);
             break;
         case RequestData::Type::RequestPlayers:
             serverWorkers.addJob(
-                    [this, requestData] { requestPlayers(*(requestData.gameSession), requestData.nPlayers); });
+                    [this, requestData] { requestPlayers(*(requestData.gameSession), requestData.nPlayers); },
+                    States::ServerState::RequestPlayers);
             break;
         case RequestData::Type::CancelRequestPlayers:
             serverWorkers.addJob([this, requestData] {
                 cancelRequestPlayers(*(requestData.gameSession), *(requestData.acquiredPlayers));
-            });
+            }, States::ServerState::CancelRequestPlayers);
             break;
     }
 }
@@ -30,10 +33,8 @@ void Server::requestGameSession(Player &player) {
         std::unique_lock<std::mutex> locker(playerQueueMutex);
         playerQueueCondVar.wait(locker, [this] { return waitingPlayerQueue.size() < PLAYER_QUEUE_SIZE; });
 
-        currentServerState = ServerState::RequestGameSession;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         waitingPlayerQueue.emplace_back(&player);
-        currentServerState = ServerState::Idle;
     }
     playerQueueCondVar.notify_all();
 }
@@ -42,37 +43,34 @@ void Server::cancelRequestGameSession(Player &player) {
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
-        currentServerState = ServerState::CancelRequestGameSession;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         for (unsigned int i = 0; i < waitingPlayerQueue.size(); ++i) {
             if (waitingPlayerQueue[i] == &player) {
                 waitingPlayerQueue.erase(waitingPlayerQueue.begin() + i);
+                lock.unlock();
                 playerQueueCondVar.notify_all();
-                currentServerState = ServerState::Idle;
                 player.onGameSessionRequestCancel(true);
                 return;
             }
         }
-        currentServerState = ServerState::Idle;
     }
     player.onGameSessionRequestCancel(false);
 }
 
 void Server::requestPlayers(GameSession &gameSession, unsigned int nPlayers) {
     std::vector<Player *> assignedPayers;
-    {
-        std::unique_lock<std::mutex> locker(playerQueueMutex);
-        for (unsigned int i = 0; i < nPlayers; ++i) {
+
+    for (unsigned int i = 0; i < nPlayers; ++i) {
+        {
+            std::unique_lock<std::mutex> locker(playerQueueMutex);
             playerQueueCondVar.wait(locker, [this] { return !waitingPlayerQueue.empty(); });
 
-            currentServerState = ServerState::RequestPlayers;
             std::this_thread::sleep_for(std::chrono::milliseconds(300));
             assignedPayers.emplace_back(waitingPlayerQueue.front());
             waitingPlayerQueue.erase(waitingPlayerQueue.begin());
-            currentServerState = ServerState::Idle;
         }
+        playerQueueCondVar.notify_all();
     }
-    playerQueueCondVar.notify_all();
     gameSession.onPlayersCollected(assignedPayers);
 }
 
@@ -80,22 +78,23 @@ void Server::cancelRequestPlayers(GameSession &gameSession, const std::vector<Pl
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
-        currentServerState = ServerState::CancelRequestPlayers;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (waitingPlayerQueue.size() + acquiredPlayers.size() > PLAYER_QUEUE_SIZE) {
-            currentServerState = ServerState::Idle;
             gameSession.onCancelRequestPlayers(false);
             return;
         }
         waitingPlayerQueue.insert(waitingPlayerQueue.end(), acquiredPlayers.begin(), acquiredPlayers.end());
-        currentServerState = ServerState::Idle;
     }
     playerQueueCondVar.notify_all();
     gameSession.onCancelRequestPlayers(true);
 }
 
-Server::ServerState Server::getState() const {
-    return currentServerState;
+const std::vector<States::ServerState> &Server::getWorkerStates() const {
+    return serverWorkers.getWorkerStates();
+}
+
+const std::vector<Player *> &Server::getWaitingPlayerQueue() const {
+    return waitingPlayerQueue;
 }
 
 
