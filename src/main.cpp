@@ -9,11 +9,7 @@
 
 WINDOW * win;
 
-int height, width, start_y, start_x;
-std::vector< Player*> players;
-std::vector< GameSession*> gameSessions;
-std::vector<std::thread> playerThreads;
-std::vector<std::thread> gameThreads;
+
 
 static std::string getPlayerState(Player *player){
 
@@ -87,7 +83,6 @@ void generateWindow( std::vector<Player*> players, std::vector<GameSession*> gam
         for (auto &player : players) {
             mvwprintw(win, i, 1, "Player %s - obecny stan: %s", player->getName().c_str(),
                       getPlayerState(player).c_str());
-            // wrefresh(win);
             i++;
         }
         i++;
@@ -102,17 +97,15 @@ void generateWindow( std::vector<Player*> players, std::vector<GameSession*> gam
                 mvwprintw(win, i, y, "%s  ", player->getName().c_str());
                 y = y + 10;
             }
-            //refresh();
-           // wrefresh(win);
             i++;
         }
         i++;
         std::vector waitingPlayers = server.getWaitingPlayerQueue();
-        mvwprintw(win, i, 1, "Kolejka oczekujacych:                                    ");
+        mvwprintw(win, i, 1, "Kolejka oczekujacych:                                                       ");
         int z = 28;
         for (auto &player : waitingPlayers) {
-            mvwprintw(win, i, z, "%s  ", player->getName().c_str());
-            z = z + 10;
+            mvwprintw(win, i, z, "%s ", player->getName().c_str());
+            z = z + 3;
         }
         i= i+2;
         std::vector workersStates = server.getWorkerStates();
@@ -135,8 +128,14 @@ int main() {
     noecho();
     cbreak();
 
-    int numberOfPlayers = 3;
-    int numberOfGames = 2;
+    int height, width, start_y, start_x;
+    std::vector< Player*> players;
+    std::vector< GameSession*> gameSessions;
+    std::vector<std::thread> playerThreads;
+    std::vector<std::thread> gameThreads;
+
+    const int numberOfPlayers = 10;
+    const int numberOfGames = 8;
 
     int yMax, xMax;
     getmaxyx(stdscr, yMax, xMax);
@@ -144,42 +143,45 @@ int main() {
     height = 50, width = xMax - 12, start_y = yMax - 50, start_x = 5;
     win = newwin(height, width, start_y, start_x);
 
-
     box(win, 0, 0);
     refresh();
     wrefresh(win);
 
     Server server;
 
+    std::string name;
+
     for (int i = 0; i < numberOfPlayers; i++) {
-        std::string name = std::to_string(i);
-        Player player( name , &server);
-        players.push_back(&player);
+        name = std::to_string(i);
+        players.push_back(new Player( name , &server));
     }
 
     for (int i = 0; i < numberOfGames; i++) {
-        GameSession game( i, &server);
-        gameSessions.push_back(&game);
+        gameSessions.push_back(new GameSession( i, &server));
     }
 
 
     std::thread GUIThread(&generateWindow, std::ref(players), std::ref(gameSessions), std::ref(server));
 
 
-
     for (auto &player : players) {
-      playerThreads.emplace_back((std::ref(player)));
+      playerThreads.emplace_back(std::ref(*player));
     }
 
-    /*for (auto &player : players) {
-        std::thread newThread(std::ref(player));
-    }*/
+    for (auto &game : gameSessions) {
+        gameThreads.emplace_back(std::ref(*game));
+    }
+
     GUIThread.join();
-    aliceThread.join();
-    bobThread.join();
-    carlThread.join();
-    game1Thread.join();
-    game2Thread.join();
+
+    for (auto &player : playerThreads) {
+        player.join();
+    }
+
+    for (auto &game : gameThreads) {
+        game.join();
+    }
+
 
     endwin();
     return 0;
