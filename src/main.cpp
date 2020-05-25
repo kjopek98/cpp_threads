@@ -134,8 +134,8 @@ int main() {
     std::vector<std::thread> playerThreads;
     std::vector<std::thread> gameThreads;
 
-    const int numberOfPlayers = 10;
-    const int numberOfGames = 8;
+    const int numberOfPlayers = 11;
+    const int numberOfGames = 10;
 
     int yMax, xMax;
     getmaxyx(stdscr, yMax, xMax);
