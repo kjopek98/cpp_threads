@@ -12,9 +12,9 @@ GameSession::GameSession(unsigned int id, Server *server) : id(id), currentGameS
 [[noreturn]] void GameSession::operator()() {
     std::mt19937 gen(time(nullptr));
     std::uniform_int_distribution<> idleTime(1, 10);
-    std::uniform_int_distribution<> nPlayers(3, 5);
+    std::uniform_int_distribution<> nPlayers(3, 5); // there will be a to b (including) players playing the game
     std::uniform_int_distribution<> gameSessionDuration(15, 30);
-    std::uniform_real_distribution<> cancelSessionRoll(0, 1);
+    std::uniform_real_distribution<> cancelSessionRoll(0, 1); // dont change this - its a wheel roll
     RequestData requestData;
 
     while (true) {
@@ -33,7 +33,7 @@ GameSession::GameSession(unsigned int id, Server *server) : id(id), currentGameS
         }
         // Further modification of playersCollected or currentSessionPlayers is an error - code does not expect this
 
-        if (cancelSessionRoll(gen) < 0.1) {
+        if (cancelSessionRoll(gen) < 0.1) { // probability for game cancellation
             requestData.type = RequestData::Type::CancelRequestPlayers;
             requestData.gameSession = this;
             requestData.acquiredPlayers = &currentSessionPlayers;
