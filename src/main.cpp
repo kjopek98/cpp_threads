@@ -73,10 +73,10 @@ static std::string getWorkerState(States::ServerState state){
     return answer;
 }
 
-void generateWindow( std::vector<Player*> players, std::vector<GameSession*> gameSessions, Server &server )
+void generateWindow( const std::vector<Player*> &players, const std::vector<GameSession*> &gameSessions, const Server &server )
 {
 
-    while(1) {
+    while(true) {
         int i = 4;
         mvwprintw(win, 1, 1, "SO2 Project - Matchmaker ");
         mvwprintw(win, 2, 1, "Krzysztof Jopek 241406, Jakub Plona 241284 ");
@@ -85,32 +85,33 @@ void generateWindow( std::vector<Player*> players, std::vector<GameSession*> gam
                       getPlayerState(player).c_str());
             i++;
         }
+        wrefresh(win);
         i++;
         for (auto &gameSession : gameSessions) {
             mvwprintw(win, i, 1, "Gra nr %d - obecny stan: %s", gameSession->getId(),
                       getGameState(gameSession).c_str());
-            std::vector currentPlayers = gameSession->getCurrentPlayers();
             i++;
-            mvwprintw(win, i, 1, "W grze:             ");
+            wrefresh(win);
+            mvwprintw(win, i, 1, "W grze:                                                                  ");
             int y = 10;
-            for (auto &player : currentPlayers) {
+            for (auto &player : gameSession->getCurrentPlayers()) {
                 mvwprintw(win, i, y, "%s  ", player->getName().c_str());
-                y = y + 10;
+                y = y + 5;
             }
+            wrefresh(win);
             i++;
         }
         i++;
-        std::vector waitingPlayers = server.getWaitingPlayerQueue();
         mvwprintw(win, i, 1, "Kolejka oczekujacych:                                                       ");
         int z = 28;
-        for (auto &player : waitingPlayers) {
+        for (auto &player : server.getWaitingPlayerQueue()) {
             mvwprintw(win, i, z, "%s ", player->getName().c_str());
             z = z + 3;
         }
+        wrefresh(win);
         i= i+2;
-        std::vector workersStates = server.getWorkerStates();
         int worker_no = 1;
-        for (auto &state : workersStates) {
+        for (auto &state : server.getWorkerStates()) {
             mvwprintw(win, i, 1, "Stan workera serwera nr %d: %s", worker_no, getWorkerState(state).c_str());
             worker_no++;
             i++;
@@ -134,8 +135,8 @@ int main() {
     std::vector<std::thread> playerThreads;
     std::vector<std::thread> gameThreads;
 
-    const int numberOfPlayers = 11;
-    const int numberOfGames = 10;
+    const int numberOfPlayers = 10;
+    const int numberOfGames = 7;
 
     int yMax, xMax;
     getmaxyx(stdscr, yMax, xMax);
