@@ -16,7 +16,7 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
 [[noreturn]] void Player::operator()() {
     std::mt19937 gen(time(nullptr));
     std::uniform_int_distribution<> idleTime(1, 10);
-    std::uniform_int_distribution<> waitForGameTime(15, 25);
+    std::uniform_int_distribution<> waitForGameTime(15, 25); // upper limit in [a, b]
     RequestData requestData;
 
     while (true) {
@@ -48,7 +48,14 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
                     cancelRequestGameSessionCondVar.wait(inLock, [this] { return cancelRequestProcessed; });
                     cancelRequestProcessed = false;
                     if (gameSessionRequestCanceled) {
+                        inLock.unlock();
                         continue;
+                    } else {
+                        inLock.unlock();
+                        {
+                            std::unique_lock<std::mutex> lock2(gameSessionMutex);
+                            gameSessionCondVar.wait(lock2, [this] { return gameSessionFound; });
+                        }
                     }
                 }
             }
