@@ -11,8 +11,8 @@ GameSession::GameSession(unsigned int id, Server *server) : id(id), currentGameS
 
 [[noreturn]] void GameSession::operator()() {
     std::mt19937 gen(time(nullptr));
-    std::uniform_int_distribution<> idleTime(1, 10);
-    std::uniform_int_distribution<> nPlayers(3, 5); // there will be a to b (including) players playing the game
+    std::uniform_int_distribution<> idleTime(5, 10);
+    std::uniform_int_distribution<> nPlayers(2, 3); // there will be a to b (including) players playing the game
     std::uniform_int_distribution<> gameSessionDuration(15, 30);
     std::uniform_real_distribution<> cancelSessionRoll(0, 1); // dont change this - its a wheel roll
     RequestData requestData;

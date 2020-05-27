@@ -33,7 +33,7 @@ void Server::requestGameSession(Player &player) {
         std::unique_lock<std::mutex> locker(playerQueueMutex);
         playerQueueCondVar.wait(locker, [this] { return waitingPlayerQueue.size() < PLAYER_QUEUE_SIZE; });
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(3));
         waitingPlayerQueue.emplace_back(&player);
     }
     playerQueueCondVar.notify_all();
@@ -43,7 +43,7 @@ void Server::cancelRequestGameSession(Player &player) {
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         for (unsigned int i = 0; i < waitingPlayerQueue.size(); ++i) {
             if (waitingPlayerQueue[i] == &player) {
                 waitingPlayerQueue.erase(waitingPlayerQueue.begin() + i);
@@ -65,7 +65,7 @@ void Server::requestPlayers(GameSession &gameSession, unsigned int nPlayers) {
             std::unique_lock<std::mutex> locker(playerQueueMutex);
             playerQueueCondVar.wait(locker, [this] { return !waitingPlayerQueue.empty(); });
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            std::this_thread::sleep_for(std::chrono::milliseconds(800));
             assignedPayers.emplace_back(waitingPlayerQueue.front());
             waitingPlayerQueue.erase(waitingPlayerQueue.begin());
         }
@@ -78,7 +78,7 @@ void Server::cancelRequestPlayers(GameSession &gameSession, const std::vector<Pl
     {
         std::unique_lock<std::mutex> lock(playerQueueMutex);
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         if (waitingPlayerQueue.size() + acquiredPlayers.size() > PLAYER_QUEUE_SIZE) {
             gameSession.onCancelRequestPlayers(false);
             return;

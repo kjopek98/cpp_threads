@@ -85,20 +85,17 @@ void generateWindow( const std::vector<Player*> &players, const std::vector<Game
                       getPlayerState(player).c_str());
             i++;
         }
-        wrefresh(win);
         i++;
         for (auto &gameSession : gameSessions) {
             mvwprintw(win, i, 1, "Gra nr %d - obecny stan: %s", gameSession->getId(),
                       getGameState(gameSession).c_str());
             i++;
-            wrefresh(win);
             mvwprintw(win, i, 1, "W grze:                                                                  ");
             int y = 10;
             for (auto &player : gameSession->getCurrentPlayers()) {
                 mvwprintw(win, i, y, "%s  ", player->getName().c_str());
                 y = y + 5;
             }
-            wrefresh(win);
             i++;
         }
         i++;
@@ -108,7 +105,6 @@ void generateWindow( const std::vector<Player*> &players, const std::vector<Game
             mvwprintw(win, i, z, "%s ", player->getName().c_str());
             z = z + 3;
         }
-        wrefresh(win);
         i= i+2;
         int worker_no = 1;
         for (auto &state : server.getWorkerStates()) {
@@ -116,7 +112,7 @@ void generateWindow( const std::vector<Player*> &players, const std::vector<Game
             worker_no++;
             i++;
         }
-        refresh();
+        //refresh();
         wrefresh(win);
     }
 
@@ -135,8 +131,8 @@ int main() {
     std::vector<std::thread> playerThreads;
     std::vector<std::thread> gameThreads;
 
-    const int numberOfPlayers = 10;
-    const int numberOfGames = 7;
+    const int numberOfPlayers = 13;
+    const int numberOfGames = 4;
 
     int yMax, xMax;
     getmaxyx(stdscr, yMax, xMax);

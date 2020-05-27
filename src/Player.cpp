@@ -15,7 +15,7 @@ Player::Player(std::string name, Server *server) : playerName(std::move(name)), 
 
 [[noreturn]] void Player::operator()() {
     std::mt19937 gen(time(nullptr));
-    std::uniform_int_distribution<> idleTime(1, 10);
+    std::uniform_int_distribution<> idleTime(5, 10);
     std::uniform_int_distribution<> waitForGameTime(15, 25); // upper limit in [a, b]
     RequestData requestData;
 
